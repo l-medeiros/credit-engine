@@ -1,7 +1,7 @@
-package com.lucasmedeiros.credit_engine.controller
+package com.lucasmedeiros.creditengine.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.lucasmedeiros.credit_engine.controller.request.LoanSimulationRequest
+import com.lucasmedeiros.creditengine.controller.request.LoanSimulationRequest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest

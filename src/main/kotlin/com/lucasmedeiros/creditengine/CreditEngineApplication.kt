@@ -1,4 +1,4 @@
-package com.lucasmedeiros.credit_engine
+package com.lucasmedeiros.creditengine
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication

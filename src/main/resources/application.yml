@@ -1,0 +1,6 @@
+springdoc:
+  swagger-ui:
+    path: /swagger
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true

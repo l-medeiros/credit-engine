@@ -1,4 +1,4 @@
-package com.lucasmedeiros.credit_engine.exception
+package com.lucasmedeiros.creditengine.exception
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,7 +18,7 @@ data class FieldError(
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-    
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
         val fieldErrors = ex.bindingResult.fieldErrors.map { error ->
@@ -28,11 +28,11 @@ class GlobalExceptionHandler {
                 rejectedValue = error.rejectedValue
             )
         }
-        
+
         val errorResponse = ErrorResponse(
             errors = fieldErrors
         )
-        
+
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
     }
 }
