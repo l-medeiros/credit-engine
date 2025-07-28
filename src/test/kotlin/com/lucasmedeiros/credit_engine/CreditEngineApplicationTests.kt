@@ -9,5 +9,4 @@ class CreditEngineApplicationTests {
 	@Test
 	fun contextLoads() {
 	}
-
 }

@@ -1,8 +1,9 @@
 plugins {
-	kotlin("jvm") version "1.9.25"
-	kotlin("plugin.spring") version "1.9.25"
-	id("org.springframework.boot") version "3.5.4"
-	id("io.spring.dependency-management") version "1.1.7"
+	kotlin("jvm") version "1.9.21"
+	kotlin("plugin.spring") version "1.9.21"
+	id("org.springframework.boot") version "3.2.5"
+	id("io.spring.dependency-management") version "1.1.4"
+	id("io.gitlab.arturbosch.detekt") version "1.23.4"
 }
 
 group = "com.lucasmedeiros"
@@ -19,12 +20,19 @@ repositories {
 }
 
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-web")
+	
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	// web
+	implementation("org.springframework.boot:spring-boot-starter-web")
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+	// Lint
+	detekt("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
+	detekt("io.gitlab.arturbosch.detekt:detekt-cli:1.23.4")
 }
 
 kotlin {
@@ -35,4 +43,11 @@ kotlin {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+detekt {
+	toolVersion = "1.23.4"
+	source.setFrom(files("./"))
+	config.setFrom(files("./detekt-config.yml"))
+	autoCorrect = true
 }
