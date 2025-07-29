@@ -4,13 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.lucasmedeiros.creditengine.controller.request.LoanSimulationRequest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
-@WebMvcTest(SimulationsController::class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class SimulationsControllerTest {
 
     @Autowired
@@ -20,10 +24,11 @@ class SimulationsControllerTest {
     private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `should return 200 when request is valid`() {
+    fun `should return 200 with simulation result when request is valid`() {
+        val birthdate = LocalDate.now().minusYears(65).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         val validRequest = LoanSimulationRequest(
-            amount = BigDecimal("1000.00"),
-            birthdate = "15/03/1990",
+            amount = BigDecimal("10000.00"),
+            birthdate = birthdate,
             installments = 12
         )
 
@@ -32,6 +37,9 @@ class SimulationsControllerTest {
             content = objectMapper.writeValueAsString(validRequest)
         }.andExpect {
             status { isOk() }
+            jsonPath("$.totalAmount") { value(10218.00) }
+            jsonPath("$.installmentAmount") { value(851.50) }
+            jsonPath("$.totalFee") { value(218.00) }
         }
     }
 
