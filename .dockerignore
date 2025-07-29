@@ -1,0 +1,10 @@
+.gradle
+build
+.git
+.gitignore
+README.md
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
