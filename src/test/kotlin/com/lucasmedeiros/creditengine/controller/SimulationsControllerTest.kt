@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
+import java.math.BigDecimal
 
 @WebMvcTest(SimulationsController::class)
 class SimulationsControllerTest {
@@ -21,7 +22,7 @@ class SimulationsControllerTest {
     @Test
     fun `should return 200 when request is valid`() {
         val validRequest = LoanSimulationRequest(
-            amount = 1000.0,
+            amount = BigDecimal("1000.00"),
             birthdate = "15/03/1990",
             installments = 12
         )
@@ -37,7 +38,7 @@ class SimulationsControllerTest {
     @Test
     fun `should return 400 when amount is negative`() {
         val invalidRequest = LoanSimulationRequest(
-            amount = -1000.0,
+            amount = BigDecimal("-1000.00"),
             birthdate = "15/03/1990",
             installments = 12
         )
@@ -55,7 +56,7 @@ class SimulationsControllerTest {
     @Test
     fun `should return 400 when birthdate format is invalid`() {
         val invalidRequest = LoanSimulationRequest(
-            amount = 1000.0,
+            amount = BigDecimal("1000.00"),
             birthdate = "15/03-1990",
             installments = 12
         )
@@ -73,7 +74,7 @@ class SimulationsControllerTest {
     @Test
     fun `should return 400 when installments is zero`() {
         val invalidRequest = LoanSimulationRequest(
-            amount = 1000.0,
+            amount = BigDecimal("1000.00"),
             birthdate = "15/03/1990",
             installments = 0
         )
@@ -85,6 +86,59 @@ class SimulationsControllerTest {
             status { isBadRequest() }
             jsonPath("$.errors[0].field") { value("installments") }
             jsonPath("$.errors[0].message") { value("Number of installments must be positive") }
+        }
+    }
+
+    @Test
+    fun `should return 400 when amount is zero`() {
+        val invalidRequest = LoanSimulationRequest(
+            amount = BigDecimal.ZERO,
+            birthdate = "15/03/1990",
+            installments = 12
+        )
+
+        mockMvc.post("/simulations") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(invalidRequest)
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.errors[0].field") { value("amount") }
+            jsonPath("$.errors[0].message") { value("Amount must be positive") }
+        }
+    }
+
+    @Test
+    fun `should return 400 when installments is negative`() {
+        val invalidRequest = LoanSimulationRequest(
+            amount = BigDecimal("1000.00"),
+            birthdate = "15/03/1990",
+            installments = -5
+        )
+
+        mockMvc.post("/simulations") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(invalidRequest)
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.errors[0].field") { value("installments") }
+            jsonPath("$.errors[0].message") { value("Number of installments must be positive") }
+        }
+    }
+
+    @Test
+    fun `should return 400 when birthdate is empty`() {
+        val invalidRequest = LoanSimulationRequest(
+            amount = BigDecimal("1000.00"),
+            birthdate = "",
+            installments = 12
+        )
+
+        mockMvc.post("/simulations") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(invalidRequest)
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.errors[0].field") { value("birthdate") }
         }
     }
 }
