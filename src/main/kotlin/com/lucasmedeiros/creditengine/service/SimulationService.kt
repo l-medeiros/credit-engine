@@ -1,7 +1,7 @@
 package com.lucasmedeiros.creditengine.service
 
+import com.lucasmedeiros.creditengine.domain.LoanApplication
 import com.lucasmedeiros.creditengine.domain.LoanSimulation
-import com.lucasmedeiros.creditengine.domain.LoanSimulationResult
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -18,7 +18,7 @@ class SimulationService(private val feeService: FeeService) {
 
     private val logger = LoggerFactory.getLogger(SimulationService::class.java)
 
-    fun simulate(simulation: LoanSimulation): LoanSimulationResult {
+    fun simulate(simulation: LoanApplication): LoanSimulation {
         logger.info("Starting loan simulation for $simulation")
 
         val feeRate = feeService.calculateFeeRate(simulation.birthdate)
@@ -32,7 +32,7 @@ class SimulationService(private val feeService: FeeService) {
         val totalAmount = installmentAmount.multiply(BigDecimal.valueOf(simulation.installments.toLong()))
         val totalFeePaid = totalAmount.subtract(simulation.amount)
 
-        return LoanSimulationResult(
+        return LoanSimulation(
             totalAmountToBePaid = totalAmount,
             monthlyInstallmentAmount = installmentAmount,
             totalFeePaid = totalFeePaid

@@ -1,6 +1,6 @@
 package com.lucasmedeiros.creditengine.controller.request
 
-import com.lucasmedeiros.creditengine.domain.LoanSimulation
+import com.lucasmedeiros.creditengine.domain.LoanApplication
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
@@ -10,7 +10,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
-data class LoanSimulationRequest(
+data class LoanApplicationRequest(
     @field:Positive(message = "Amount must be positive")
     val amount: BigDecimal,
 
@@ -22,12 +22,12 @@ data class LoanSimulationRequest(
     val installments: Int
 ) {
 
-    fun toDomain(): LoanSimulation {
+    fun toDomain(): LoanApplication {
         val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         val localDate = LocalDate.parse(birthdate, formatter)
         val date = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
 
-        return LoanSimulation(
+        return LoanApplication(
             amount = amount,
             birthdate = date,
             installments = installments

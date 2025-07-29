@@ -1,6 +1,6 @@
 package com.lucasmedeiros.creditengine.controller.response
 
-import com.lucasmedeiros.creditengine.domain.LoanSimulationResult
+import com.lucasmedeiros.creditengine.domain.LoanSimulation
 import java.math.BigDecimal
 
 data class LoanSimulationResponse(
@@ -9,7 +9,7 @@ data class LoanSimulationResponse(
     val totalFee: BigDecimal
 ) {
     companion object {
-        fun fromDomain(result: LoanSimulationResult): LoanSimulationResponse {
+        fun fromDomain(result: LoanSimulation): LoanSimulationResponse {
             return LoanSimulationResponse(
                 totalAmount = result.totalAmountToBePaid,
                 installmentAmount = result.monthlyInstallmentAmount,

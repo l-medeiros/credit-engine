@@ -1,6 +1,6 @@
 package com.lucasmedeiros.creditengine.controller
 
-import com.lucasmedeiros.creditengine.controller.request.LoanSimulationRequest
+import com.lucasmedeiros.creditengine.controller.request.LoanApplicationRequest
 import com.lucasmedeiros.creditengine.controller.response.LoanSimulationResponse
 import com.lucasmedeiros.creditengine.service.SimulationService
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -22,7 +22,7 @@ class SimulationsController(private val simulationService: SimulationService) {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    fun simulate(@Valid @RequestBody loanRequest: LoanSimulationRequest): LoanSimulationResponse {
+    fun simulate(@Valid @RequestBody loanRequest: LoanApplicationRequest): LoanSimulationResponse {
         logger.info("Starting loan simulation for $loanRequest")
 
         return try {

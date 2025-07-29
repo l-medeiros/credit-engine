@@ -1,6 +1,6 @@
 package com.lucasmedeiros.creditengine.service
 
-import com.lucasmedeiros.creditengine.domain.LoanSimulation
+import com.lucasmedeiros.creditengine.domain.LoanApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -79,7 +79,7 @@ class SimulationServiceTest {
     @Test
     fun `should call fee service with correct birthdate`() {
         val specificDate = createDateFromAge(28)
-        val simulation = LoanSimulation(
+        val simulation = LoanApplication(
             amount = BigDecimal("7500.00"),
             birthdate = specificDate,
             installments = 20
@@ -91,9 +91,9 @@ class SimulationServiceTest {
         verify(exactly = 1) { feeService.calculateFeeRate(specificDate) }
     }
 
-    private fun createLoanSimulation(amount: BigDecimal, age: Int, installments: Int): LoanSimulation {
+    private fun createLoanSimulation(amount: BigDecimal, age: Int, installments: Int): LoanApplication {
         val birthDate = createDateFromAge(age)
-        return LoanSimulation(
+        return LoanApplication(
             amount = amount,
             birthdate = birthDate,
             installments = installments
