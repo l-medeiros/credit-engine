@@ -1,3 +1,10 @@
+logging:
+  level:
+    com.lucasmedeiros.creditengine: DEBUG
+    org.springframework.web: INFO
+  file:
+    name: logs/credit-engine.log
+
 springdoc:
   swagger-ui:
     path: /swagger

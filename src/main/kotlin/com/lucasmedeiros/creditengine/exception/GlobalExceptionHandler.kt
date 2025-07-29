@@ -1,5 +1,6 @@
 package com.lucasmedeiros.creditengine.exception
 
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -19,8 +20,12 @@ data class FieldError(
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
+    private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        logger.error("Validation error occurred: ${ex.message}")
+
         val fieldErrors = ex.bindingResult.fieldErrors.map { error ->
             FieldError(
                 field = error.field,
@@ -32,6 +37,8 @@ class GlobalExceptionHandler {
         val errorResponse = ErrorResponse(
             errors = fieldErrors
         )
+
+        logger.error("Validation error response: $errorResponse")
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
     }
