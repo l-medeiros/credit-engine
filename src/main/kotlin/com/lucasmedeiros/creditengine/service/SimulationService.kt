@@ -16,6 +16,9 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import com.lucasmedeiros.creditengine.controller.response.SimulationResultResponse
 
 @Service
 class SimulationService(
@@ -113,5 +116,20 @@ class SimulationService(
             .multiply(monthlyFeeRate)
             .divide(denominator, MATH_CONTEXT)
             .setScale(MATH_SCALE, RoundingMode.HALF_UP)
+    }
+
+    fun getSuccessfulSimulationsByBatch(batchId: UUID, pageable: Pageable): Page<SimulationResultResponse> {
+        logger.info(
+            "Retrieving successful simulations for batchId=$batchId with pagination: " +
+            "page=${pageable.pageNumber}, size=${pageable.pageSize}"
+        )
+
+        batchSimulationRepository
+            .findById(batchId)
+            .orElseThrow { IllegalArgumentException("Batch not found with id: $batchId") }
+
+        return simulationRepository
+            .findByBatchIdAndStatusOrderByProcessedAtDesc(batchId, SimulationStatus.COMPLETED, pageable)
+            .map { SimulationResultResponse.fromEntity(it) }
     }
 }

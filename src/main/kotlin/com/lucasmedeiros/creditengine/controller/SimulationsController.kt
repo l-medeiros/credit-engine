@@ -5,12 +5,16 @@ import com.lucasmedeiros.creditengine.controller.request.LoanApplicationRequest
 import com.lucasmedeiros.creditengine.controller.response.BatchSimulationResponse
 import com.lucasmedeiros.creditengine.controller.response.BatchStatusResponse
 import com.lucasmedeiros.creditengine.controller.response.LoanSimulationResponse
+import com.lucasmedeiros.creditengine.controller.response.PagedSimulationResponse
 import com.lucasmedeiros.creditengine.service.BatchSimulationService
 import com.lucasmedeiros.creditengine.service.SimulationService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RequestBody
 import java.util.UUID
@@ -76,6 +81,35 @@ class SimulationsController(
             }
         } catch (exception: Exception) {
             logger.error("Error retrieving batch status for batchId=$batchId: ${exception.message}")
+            throw exception
+        }
+    }
+
+    @GetMapping("/batch/{batchId}/results")
+    @Operation(summary = "Get successful simulations for a specific batch with pagination")
+    fun getBatchSuccessfulSimulations(
+        @PathVariable batchId: UUID,
+        @Parameter(description = "Page number (0-based)", example = "0")
+        @RequestParam(defaultValue = "0") page: Int,
+        @Parameter(description = "Page size", example = "20")
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PagedSimulationResponse> {
+        return try {
+            val pageable: Pageable = PageRequest.of(page, size)
+            val result = simulationService.getSuccessfulSimulationsByBatch(batchId, pageable)
+            val response = PagedSimulationResponse.fromPage(result)
+
+            ResponseEntity.ok(response).also {
+                logger.info(
+                    "Successful simulations retrieved for batchId=$batchId: page=$page, size=$size, " +
+                    "totalElements = $ { response.totalElements } "
+                )
+            }
+        } catch (exception: IllegalArgumentException) {
+            logger.warn("Batch not found: batchId=$batchId")
+            ResponseEntity.notFound().build()
+        } catch (exception: Exception) {
+            logger.error("Error retrieving successful simulations for batchId=$batchId: ${exception.message}")
             throw exception
         }
     }

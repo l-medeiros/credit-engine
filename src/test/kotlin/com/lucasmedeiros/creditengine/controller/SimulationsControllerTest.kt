@@ -319,4 +319,175 @@ class SimulationsControllerTest {
             jsonPath("$.failedSimulations") { exists() }
         }
     }
+
+    @Test
+    fun `should return paginated successful simulations for specific batch with default pagination`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            ),
+            LoanApplication(
+                amount = BigDecimal("5000.00"),
+                birthdate = "20/05/1985",
+                installments = 6
+            )
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        val createResult = mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(batchRequest)
+        }.andExpect {
+            status { isAccepted() }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        Thread.sleep(3000)
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}/results") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { isArray() }
+            jsonPath("$.page") { value(0) }
+            jsonPath("$.size") { value(20) }
+            jsonPath("$.totalElements") { exists() }
+            jsonPath("$.totalPages") { exists() }
+            jsonPath("$.first") { value(true) }
+            jsonPath("$.last") { exists() }
+        }
+    }
+
+    @Test
+    fun `should return paginated successful simulations for specific batch with custom pagination`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            )
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        val createResult = mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(batchRequest)
+        }.andExpect {
+            status { isAccepted() }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        Thread.sleep(3000)
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}/results") {
+            contentType = MediaType.APPLICATION_JSON
+            param("page", "0")
+            param("size", "5")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { isArray() }
+            jsonPath("$.page") { value(0) }
+            jsonPath("$.size") { value(5) }
+            jsonPath("$.totalElements") { exists() }
+            jsonPath("$.totalPages") { exists() }
+        }
+    }
+
+    @Test
+    fun `should return 404 when requesting results for non-existent batch`() {
+        val nonExistentBatchId = UUID.randomUUID()
+
+        mockMvc.get("/simulations/batch/$nonExistentBatchId/results") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `should return empty page when batch has no successful simulations`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            )
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        val createResult = mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(batchRequest)
+        }.andExpect {
+            status { isAccepted() }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}/results") {
+            contentType = MediaType.APPLICATION_JSON
+            param("page", "999")
+            param("size", "10")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { isEmpty() }
+            jsonPath("$.page") { value(999) }
+            jsonPath("$.size") { value(10) }
+            jsonPath("$.totalElements") { exists() }
+            jsonPath("$.totalPages") { exists() }
+        }
+    }
+
+    @Test
+    fun `should validate successful simulations response structure for specific batch`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            )
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        val createResult = mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(batchRequest)
+        }.andExpect {
+            status { isAccepted() }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        Thread.sleep(3000)
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}/results") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content[*].id") { exists() }
+            jsonPath("$.content[*].amountRequested") { exists() }
+            jsonPath("$.content[*].installments") { exists() }
+            jsonPath("$.content[*].totalAmount") { exists() }
+            jsonPath("$.content[*].installmentAmount") { exists() }
+            jsonPath("$.content[*].totalFee") { exists() }
+            jsonPath("$.content[*].processedAt") { exists() }
+            jsonPath("$.content[*].createdAt") { exists() }
+        }
+    }
 }

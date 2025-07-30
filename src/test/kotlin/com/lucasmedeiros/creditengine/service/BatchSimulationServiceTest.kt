@@ -17,12 +17,33 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.AfterEach
+import org.springframework.transaction.support.TransactionSynchronization
 
 class BatchSimulationServiceTest {
 
     private val batchSimulationRepository = mockk<BatchSimulationRepository>(relaxed = true)
     private val eventPublisher = mockk<EventPublisher>(relaxed = true)
     private val batchSimulationService = BatchSimulationService(batchSimulationRepository, eventPublisher)
+
+    @BeforeEach
+    fun setUp() {
+        mockkStatic(TransactionSynchronizationManager::class)
+        every { TransactionSynchronizationManager.isSynchronizationActive() } returns true
+        every { TransactionSynchronizationManager.registerSynchronization(any()) } answers {
+            val synchronization = firstArg<TransactionSynchronization>()
+            synchronization.afterCommit()
+        }
+    }
+
+    @AfterEach
+    fun tearDown() {
+        unmockkStatic(TransactionSynchronizationManager::class)
+    }
 
     @Test
     fun `should create batch simulation successfully`() {
