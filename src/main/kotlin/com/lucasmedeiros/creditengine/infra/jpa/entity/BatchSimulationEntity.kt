@@ -25,6 +25,9 @@ data class BatchSimulationEntity(
     @Column(name = "completed_simulations")
     val completedSimulations: Int = 0,
 
+    @Column(name = "failed_simulations")
+    val failedSimulations: Int = 0,
+
     @Column(name = "created_at")
     val createdAt: LocalDateTime? = null,
 

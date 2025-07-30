@@ -1,25 +1,41 @@
 package com.lucasmedeiros.creditengine.service
 
 import com.lucasmedeiros.creditengine.domain.LoanApplication
+import com.lucasmedeiros.creditengine.domain.LoanSimulation
+import com.lucasmedeiros.creditengine.infra.jpa.entity.BatchSimulationEntity
+import com.lucasmedeiros.creditengine.infra.jpa.entity.BatchStatus
+import com.lucasmedeiros.creditengine.infra.jpa.entity.SimulationEntity
+import com.lucasmedeiros.creditengine.infra.jpa.entity.SimulationStatus
+import com.lucasmedeiros.creditengine.infra.jpa.repository.BatchSimulationRepository
+import com.lucasmedeiros.creditengine.infra.jpa.repository.SimulationRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Optional
+import java.util.UUID
 
 class SimulationServiceTest {
 
     private lateinit var feeService: FeeService
+    private lateinit var simulationRepository: SimulationRepository
+    private lateinit var batchSimulationRepository: BatchSimulationRepository
     private lateinit var simulationService: SimulationService
 
     @BeforeEach
     fun setUp() {
         feeService = mockk<FeeService>()
-        simulationService = SimulationService(feeService)
+        simulationRepository = mockk<SimulationRepository>()
+        batchSimulationRepository = mockk<BatchSimulationRepository>()
+        simulationService = SimulationService(feeService, simulationRepository, batchSimulationRepository)
     }
 
     @Test
@@ -88,6 +104,150 @@ class SimulationServiceTest {
         simulationService.simulate(simulation)
 
         verify(exactly = 1) { feeService.calculateFeeRate(specificDateString) }
+    }
+
+    @Test
+    fun `should save successful simulation correctly`() {
+        val batchId = UUID.randomUUID()
+        val loanApplication = LoanApplication(
+            amount = BigDecimal("10000.00"),
+            birthdate = "15/03/1990",
+            installments = 12
+        )
+        val loanSimulation = LoanSimulation(
+            monthlyInstallmentAmount = BigDecimal("900.00"),
+            totalAmountToBePaid = BigDecimal("10800.00"),
+            totalFeePaid = BigDecimal("800.00")
+        )
+
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 5
+        )
+
+        val savedEntity = SimulationEntity(
+            id = UUID.randomUUID(),
+            batchSimulationEntity = batchEntity,
+            status = SimulationStatus.COMPLETED,
+            amountRequested = loanApplication.amount,
+            birthdate = LocalDate.parse(loanApplication.birthdate, DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            installments = loanApplication.installments,
+            totalAmount = loanSimulation.totalAmountToBePaid,
+            installmentAmount = loanSimulation.monthlyInstallmentAmount,
+            totalFee = loanSimulation.totalFeePaid,
+            processedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now()
+        )
+
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity)
+        every { simulationRepository.save(any<SimulationEntity>()) } returns savedEntity
+
+        val result = simulationService.saveSuccessfulSimulation(batchId, loanApplication, loanSimulation)
+
+        verify { batchSimulationRepository.findById(batchId) }
+        verify { simulationRepository.save(any<SimulationEntity>()) }
+        assertEquals(SimulationStatus.COMPLETED, result.status)
+        assertEquals(loanApplication.amount, result.amountRequested)
+        assertEquals(
+            LocalDate.parse(loanApplication.birthdate, DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            result.birthdate
+        )
+        assertEquals(loanApplication.installments, result.installments)
+        assertEquals(loanSimulation.totalAmountToBePaid, result.totalAmount)
+        assertEquals(loanSimulation.monthlyInstallmentAmount, result.installmentAmount)
+        assertEquals(loanSimulation.totalFeePaid, result.totalFee)
+        assertNotNull(result.processedAt)
+        assertNotNull(result.createdAt)
+    }
+
+    @Test
+    fun `should save failed simulation correctly`() {
+        val batchId = UUID.randomUUID()
+        val loanApplication = LoanApplication(
+            amount = BigDecimal("10000.00"),
+            birthdate = "15/03/1990",
+            installments = 12
+        )
+        val error = RuntimeException("Simulation failed")
+
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 5
+        )
+
+        val savedEntity = SimulationEntity(
+            id = UUID.randomUUID(),
+            batchSimulationEntity = batchEntity,
+            status = SimulationStatus.FAILED,
+            amountRequested = loanApplication.amount,
+            birthdate = LocalDate.parse(loanApplication.birthdate, DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            installments = loanApplication.installments,
+            processedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now()
+        )
+
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity)
+        every { simulationRepository.save(any<SimulationEntity>()) } returns savedEntity
+
+        val result = simulationService.saveFailedSimulation(batchId, loanApplication, error)
+
+        verify { batchSimulationRepository.findById(batchId) }
+        verify { simulationRepository.save(any<SimulationEntity>()) }
+
+        assertEquals(SimulationStatus.FAILED, result.status)
+        assertEquals(loanApplication.amount, result.amountRequested)
+        assertEquals(
+            LocalDate.parse(loanApplication.birthdate, DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            result.birthdate
+        )
+        assertEquals(loanApplication.installments, result.installments)
+        assertNotNull(result.processedAt)
+        assertNotNull(result.createdAt)
+    }
+
+    @Test
+    fun `should throw exception when batch not found for successful simulation`() {
+        val batchId = UUID.randomUUID()
+        val loanApplication = LoanApplication(
+            amount = BigDecimal("10000.00"),
+            birthdate = "15/03/1990",
+            installments = 12
+        )
+        val loanSimulation = LoanSimulation(
+            monthlyInstallmentAmount = BigDecimal("900.00"),
+            totalAmountToBePaid = BigDecimal("10800.00"),
+            totalFeePaid = BigDecimal("800.00")
+        )
+
+        every { batchSimulationRepository.findById(batchId) } returns Optional.empty()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            simulationService.saveSuccessfulSimulation(batchId, loanApplication, loanSimulation)
+        }
+
+        verify { batchSimulationRepository.findById(batchId) }
+    }
+
+    @Test
+    fun `should throw exception when batch not found for failed simulation`() {
+        val batchId = UUID.randomUUID()
+        val loanApplication = LoanApplication(
+            amount = BigDecimal("10000.00"),
+            birthdate = "15/03/1990",
+            installments = 12
+        )
+        val error = RuntimeException("Simulation failed")
+
+        every { batchSimulationRepository.findById(batchId) } returns Optional.empty()
+
+        assertThrows<IllegalArgumentException> {
+            simulationService.saveFailedSimulation(batchId, loanApplication, error)
+        }
+        verify { batchSimulationRepository.findById(batchId) }
     }
 
     private fun createLoanSimulation(amount: BigDecimal, age: Int, installments: Int): LoanApplication {

@@ -2,18 +2,32 @@ package com.lucasmedeiros.creditengine.service
 
 import com.lucasmedeiros.creditengine.domain.LoanApplication
 import com.lucasmedeiros.creditengine.domain.LoanSimulation
+import com.lucasmedeiros.creditengine.infra.jpa.entity.SimulationEntity
+import com.lucasmedeiros.creditengine.infra.jpa.entity.SimulationStatus
+import com.lucasmedeiros.creditengine.infra.jpa.repository.SimulationRepository
+import com.lucasmedeiros.creditengine.infra.jpa.repository.BatchSimulationRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @Service
-class SimulationService(private val feeService: FeeService) {
+class SimulationService(
+    private val feeService: FeeService,
+    private val simulationRepository: SimulationRepository,
+    private val batchSimulationRepository: BatchSimulationRepository
+) {
 
     companion object {
         private val MATH_CONTEXT = MathContext(10, RoundingMode.HALF_UP)
         private const val MATH_SCALE = 2
+        private val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     }
 
     private val logger = LoggerFactory.getLogger(SimulationService::class.java)
@@ -37,6 +51,57 @@ class SimulationService(private val feeService: FeeService) {
             monthlyInstallmentAmount = installmentAmount,
             totalFeePaid = totalFeePaid
         ).also { logger.info("Simulation completed - result: $it") }
+    }
+
+    @Transactional
+    fun saveSuccessfulSimulation(
+        batchId: UUID,
+        loanApplication: LoanApplication,
+        result: LoanSimulation
+    ): SimulationEntity {
+        val batchEntity = batchSimulationRepository.findById(batchId)
+            .orElseThrow { IllegalArgumentException("Batch not found: $batchId") }
+
+        val simulationEntity = SimulationEntity(
+            batchSimulationEntity = batchEntity,
+            status = SimulationStatus.COMPLETED,
+            amountRequested = loanApplication.amount,
+            birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),
+            installments = loanApplication.installments,
+            totalAmount = result.totalAmountToBePaid,
+            installmentAmount = result.monthlyInstallmentAmount,
+            totalFee = result.totalFeePaid,
+            processedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now()
+        )
+
+        return simulationRepository.save(simulationEntity).also {
+            logger.info("Successful simulation saved for batchId=$batchId")
+        }
+    }
+
+    @Transactional
+    fun saveFailedSimulation(
+        batchId: UUID,
+        loanApplication: LoanApplication,
+        error: Exception
+    ): SimulationEntity {
+        val batchEntity = batchSimulationRepository.findById(batchId)
+            .orElseThrow { IllegalArgumentException("Batch not found: $batchId") }
+
+        val simulationEntity = SimulationEntity(
+            batchSimulationEntity = batchEntity,
+            status = SimulationStatus.FAILED,
+            amountRequested = loanApplication.amount,
+            birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),
+            installments = loanApplication.installments,
+            processedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now()
+        )
+
+        return simulationRepository.save(simulationEntity).also {
+            logger.error("Failed simulation saved for batchId=$batchId: ${error.message}")
+        }
     }
 
     private fun calculateInstallmentAmount(amount: BigDecimal, installments: Int, feeRate: BigDecimal): BigDecimal {

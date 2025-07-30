@@ -3,6 +3,7 @@ package com.lucasmedeiros.creditengine.controller
 import com.lucasmedeiros.creditengine.controller.request.BatchLoanApplicationRequest
 import com.lucasmedeiros.creditengine.controller.request.LoanApplicationRequest
 import com.lucasmedeiros.creditengine.controller.response.BatchSimulationResponse
+import com.lucasmedeiros.creditengine.controller.response.BatchStatusResponse
 import com.lucasmedeiros.creditengine.controller.response.LoanSimulationResponse
 import com.lucasmedeiros.creditengine.service.BatchSimulationService
 import com.lucasmedeiros.creditengine.service.SimulationService
@@ -11,11 +12,15 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RequestBody
+import java.util.UUID
 
 @RestController
 @RequestMapping("/simulations")
@@ -55,4 +60,23 @@ class SimulationsController(
             logger.error("Error creating batch simulation: ${exception.message}")
             throw exception
         }
+
+    @GetMapping("/batch/{batchId}")
+    @Operation(summary = "Get batch simulation status")
+    fun getBatchStatus(@PathVariable batchId: UUID): ResponseEntity<BatchStatusResponse> {
+        return try {
+            val batch = batchSimulationService.getBatchStatus(batchId)
+            if (batch != null) {
+                ResponseEntity.ok(BatchStatusResponse.fromEntity(batch)).also {
+                    logger.info("Batch status retrieved successfully: batchId=$batchId")
+                }
+            } else {
+                logger.warn("Batch not found: batchId=$batchId")
+                ResponseEntity.notFound().build()
+            }
+        } catch (exception: Exception) {
+            logger.error("Error retrieving batch status for batchId=$batchId: ${exception.message}")
+            throw exception
+        }
+    }
 }

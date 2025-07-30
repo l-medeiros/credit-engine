@@ -34,6 +34,47 @@ class BatchSimulationService(
         )
     }
 
+    @Transactional
+    fun incrementCompletedSimulations(batchId: UUID) {
+        val updatedRows = batchSimulationRepository.incrementCompletedSimulations(batchId)
+
+        if (updatedRows == 0) {
+            logger.error("No batch found with id: $batchId")
+            throw IllegalArgumentException("Batch not found: $batchId")
+        }
+
+        checkAndMarkBatchAsCompleted(batchId)
+    }
+
+    @Transactional
+    fun incrementFailedSimulations(batchId: UUID) {
+        val updatedRows = batchSimulationRepository.incrementFailedSimulations(batchId)
+
+        if (updatedRows == 0) {
+            logger.error("No batch found with id: $batchId")
+            throw IllegalArgumentException("Batch not found: $batchId")
+        }
+
+        checkAndMarkBatchAsCompleted(batchId)
+    }
+
+    private fun checkAndMarkBatchAsCompleted(batchId: UUID) {
+        val batch = batchSimulationRepository.findById(batchId).orElse(null)
+        if (batch != null) {
+            val processedSimulations = batch.completedSimulations + batch.failedSimulations
+
+            if (processedSimulations >= batch.totalSimulations) {
+                batchSimulationRepository.markAsCompleted(batchId, LocalDateTime.now())
+                logger.info(
+                    "Batch completed: batchId=$batchId, completed=${batch.completedSimulations}, " +
+                    "failed=${batch.failedSimulations}, total=${batch.totalSimulations}"
+                )
+            } else {
+                logger.info("Batch in progress: batchId=$batchId")
+            }
+        }
+    }
+
     private fun saveBatch(request: BatchLoanApplicationRequest) = batchSimulationRepository.save(
         BatchSimulationEntity(
             id = UUID.randomUUID(),
@@ -53,5 +94,9 @@ class BatchSimulationService(
 
         eventPublisher.publish(event)
         logger.info("BatchSimulationCreatedEvent published for batchId=${batch.id}")
+    }
+
+    fun getBatchStatus(batchId: UUID): BatchSimulationEntity? {
+        return batchSimulationRepository.findById(batchId).orElse(null)
     }
 }

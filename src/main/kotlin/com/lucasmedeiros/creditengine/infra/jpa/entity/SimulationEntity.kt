@@ -56,5 +56,6 @@ data class SimulationEntity(
 enum class SimulationStatus {
     PENDING,
     PROCESSING,
-    COMPLETED
+    COMPLETED,
+    FAILED
 }

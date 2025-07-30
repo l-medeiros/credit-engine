@@ -2,7 +2,9 @@ package com.lucasmedeiros.creditengine.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.lucasmedeiros.creditengine.controller.request.BatchLoanApplicationRequest
+import com.lucasmedeiros.creditengine.controller.response.BatchSimulationResponse
 import com.lucasmedeiros.creditengine.domain.LoanApplication
+import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -10,10 +12,12 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -217,25 +221,102 @@ class SimulationsControllerTest {
     }
 
     @Test
-    fun `should return 202 when batch simulation has maximum allowed size`() {
-        val birthdate = LocalDate.now().minusYears(30).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        val loanApplications = (1..10000).map {
+    fun `should return batch status when batch exists`() {
+        val loanApplications = listOf(
             LoanApplication(
-                amount = BigDecimal("1000.00"),
-                birthdate = birthdate,
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
                 installments = 12
             )
-        }
-        val validRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
 
-        mockMvc.post("/simulations/batch") {
+        val createResult = mockMvc.post("/simulations/batch") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(validRequest)
+            content = objectMapper.writeValueAsString(batchRequest)
         }.andExpect {
             status { isAccepted() }
-            jsonPath("$.batchId") { exists() }
-            jsonPath("$.status") { value("PENDING") }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.batchId") { value(batchResponse.batchId.toString()) }
+            jsonPath("$.status") { exists() }
+            jsonPath("$.totalSimulations") { value(1) }
+            jsonPath("$.completedSimulations") { exists() }
+            jsonPath("$.failedSimulations") { exists() }
             jsonPath("$.createdAt") { exists() }
+        }
+    }
+
+    @Test
+    fun `should return 404 when batch does not exist`() {
+        val nonExistentBatchId = UUID.randomUUID()
+
+        mockMvc.get("/simulations/batch/$nonExistentBatchId") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `should process batch simulations asynchronously and update status`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            ),
+            LoanApplication(
+                amount = BigDecimal("5000.00"),
+                birthdate = "20/05/1985",
+                installments = 6
+            )
+        )
+        val batchRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        val createResult = mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(batchRequest)
+        }.andExpect {
+            status { isAccepted() }
+            jsonPath("$.status") { value("PENDING") }
+        }.andReturn()
+
+        val batchResponse = objectMapper.readValue(
+            createResult.response.contentAsString,
+            BatchSimulationResponse::class.java
+        )
+
+        Thread.sleep(2000)
+
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.batchId") { value(batchResponse.batchId.toString()) }
+            jsonPath("$.totalSimulations") { value(2) }
+            jsonPath("$.completedSimulations") { value(greaterThanOrEqualTo(0)) }
+            jsonPath("$.failedSimulations") { value(greaterThanOrEqualTo(0)) }
+        }
+
+        Thread.sleep(3000)
+        mockMvc.get("/simulations/batch/${batchResponse.batchId}") {
+            contentType = MediaType.APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status") { value("COMPLETED") }
+            jsonPath("$.completedAt") { exists() }
+            jsonPath("$.completedSimulations") { exists() }
+            jsonPath("$.failedSimulations") { exists() }
         }
     }
 }

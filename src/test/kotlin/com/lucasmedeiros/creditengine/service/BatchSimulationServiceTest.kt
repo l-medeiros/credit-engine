@@ -12,13 +12,15 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.util.Optional
 import java.util.UUID
 
 class BatchSimulationServiceTest {
 
-    private val batchSimulationRepository = mockk<BatchSimulationRepository>()
+    private val batchSimulationRepository = mockk<BatchSimulationRepository>(relaxed = true)
     private val eventPublisher = mockk<EventPublisher>(relaxed = true)
     private val batchSimulationService = BatchSimulationService(batchSimulationRepository, eventPublisher)
 
@@ -139,5 +141,133 @@ class BatchSimulationServiceTest {
 
         verify { batchSimulationRepository.save(any()) }
         verify { eventPublisher.publish(any<BatchSimulationCreatedEvent>()) }
+    }
+
+    @Test
+    fun `should increment completed simulations successfully`() {
+        val batchId = UUID.randomUUID()
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 5,
+            failedSimulations = 2
+        )
+
+        every { batchSimulationRepository.incrementCompletedSimulations(batchId) } returns 1
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity)
+
+        batchSimulationService.incrementCompletedSimulations(batchId)
+
+        verify { batchSimulationRepository.incrementCompletedSimulations(batchId) }
+        verify { batchSimulationRepository.findById(batchId) }
+    }
+
+    @Test
+    fun `should increment failed simulations successfully`() {
+        val batchId = UUID.randomUUID()
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 5,
+            failedSimulations = 2
+        )
+
+        every { batchSimulationRepository.incrementFailedSimulations(batchId) } returns 1
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity)
+
+        batchSimulationService.incrementFailedSimulations(batchId)
+
+        verify { batchSimulationRepository.incrementFailedSimulations(batchId) }
+        verify { batchSimulationRepository.findById(batchId) }
+    }
+
+    @Test
+    fun `should throw exception when batch not found for increment completed`() {
+        val batchId = UUID.randomUUID()
+        every { batchSimulationRepository.incrementCompletedSimulations(batchId) } returns 0
+
+        assertThrows<IllegalArgumentException> {
+            batchSimulationService.incrementCompletedSimulations(batchId)
+        }
+}
+
+    @Test
+    fun `should throw exception when batch not found for increment failed`() {
+        val batchId = UUID.randomUUID()
+        every { batchSimulationRepository.incrementFailedSimulations(batchId) } returns 0
+
+        assertThrows<IllegalArgumentException> {
+            batchSimulationService.incrementFailedSimulations(batchId)
+        }
+    }
+
+    @Test
+    fun `should mark batch as completed when all simulations are done for increment completed`() {
+        val batchId = UUID.randomUUID()
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 9,
+            failedSimulations = 0
+        )
+        every { batchSimulationRepository.incrementCompletedSimulations(batchId) } returns 1
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity.copy(
+            completedSimulations = 10
+        ))
+        every { batchSimulationRepository.markAsCompleted(batchId, any<LocalDateTime>()) } returns 1
+
+        batchSimulationService.incrementCompletedSimulations(batchId)
+
+        verify { batchSimulationRepository.incrementCompletedSimulations(batchId) }
+        verify { batchSimulationRepository.findById(batchId) }
+        verify { batchSimulationRepository.markAsCompleted(batchId, any<LocalDateTime>()) }
+    }
+
+    @Test
+    fun `should mark batch as completed when all simulations are done for increment fail`() {
+        val batchId = UUID.randomUUID()
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 8,
+            failedSimulations = 1
+        )
+        every { batchSimulationRepository.incrementFailedSimulations(batchId) } returns 1
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity.copy(
+            failedSimulations = 2
+        ))
+        every { batchSimulationRepository.markAsCompleted(batchId, any<LocalDateTime>()) } returns 1
+
+        batchSimulationService.incrementFailedSimulations(batchId)
+
+        verify { batchSimulationRepository.incrementFailedSimulations(batchId) }
+        verify { batchSimulationRepository.findById(batchId) }
+        verify { batchSimulationRepository.markAsCompleted(batchId, any<LocalDateTime>()) }
+    }
+
+    @Test
+    fun `should not mark batch as completed when simulations are still pending via increment`() {
+        val batchId = UUID.randomUUID()
+        val batchEntity = BatchSimulationEntity(
+            id = batchId,
+            status = BatchStatus.PROCESSING,
+            totalSimulations = 10,
+            completedSimulations = 6,
+            failedSimulations = 2
+        )
+        every { batchSimulationRepository.incrementCompletedSimulations(batchId) } returns 1
+        every { batchSimulationRepository.findById(batchId) } returns Optional.of(batchEntity.copy(
+            completedSimulations = 7
+        ))
+
+        batchSimulationService.incrementCompletedSimulations(batchId)
+
+        verify { batchSimulationRepository.incrementCompletedSimulations(batchId) }
+        verify { batchSimulationRepository.findById(batchId) }
+        verify(exactly = 0) { batchSimulationRepository.markAsCompleted(any(), any<LocalDateTime>()) }
     }
 }

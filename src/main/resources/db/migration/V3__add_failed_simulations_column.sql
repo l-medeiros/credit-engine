@@ -1,0 +1,1 @@
+ALTER TABLE batch_simulation ADD COLUMN failed_simulations INTEGER DEFAULT 0;
