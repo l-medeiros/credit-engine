@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-interface SimulationRepository : JpaRepository<SimulationEntity, UUID> {
-}
+interface SimulationRepository : JpaRepository<SimulationEntity, UUID>
