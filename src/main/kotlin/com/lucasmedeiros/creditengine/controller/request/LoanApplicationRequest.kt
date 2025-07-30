@@ -5,10 +5,6 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Date
 
 data class LoanApplicationRequest(
     @field:Positive(message = "Amount must be positive")
@@ -23,13 +19,9 @@ data class LoanApplicationRequest(
 ) {
 
     fun toDomain(): LoanApplication {
-        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-        val localDate = LocalDate.parse(birthdate, formatter)
-        val date = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
-
         return LoanApplication(
             amount = amount,
-            birthdate = date,
+            birthdate = birthdate,
             installments = installments
         )
     }

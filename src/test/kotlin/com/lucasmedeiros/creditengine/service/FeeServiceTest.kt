@@ -7,8 +7,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Date
+import java.time.format.DateTimeFormatter
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FeeServiceTest {
@@ -34,9 +33,9 @@ class FeeServiceTest {
         "25, 0.05",
     )
     fun `should calculate correct fee rate for different ages`(age: Int, expectedRate: Double) {
-        val birthDate = createDateFromAge(age)
+        val birthDateString = createDateStringFromAge(age)
 
-        val feeRate = feeService.calculateFeeRate(birthDate)
+        val feeRate = feeService.calculateFeeRate(birthDateString)
 
         assertEquals(expectedRate, feeRate)
     }
@@ -44,15 +43,15 @@ class FeeServiceTest {
     @Test
     fun `should handle current date calculation correctly`() {
         val thirtyYearsAgo = LocalDate.now().minusYears(30)
-        val birthDate = Date.from(thirtyYearsAgo.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        val birthDateString = thirtyYearsAgo.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
 
-        val feeRate = feeService.calculateFeeRate(birthDate)
+        val feeRate = feeService.calculateFeeRate(birthDateString)
 
         assertEquals(0.03, feeRate)
     }
 
-    private fun createDateFromAge(age: Int): Date {
+    private fun createDateStringFromAge(age: Int): String {
         val birthLocalDate = LocalDate.now().minusYears(age.toLong())
-        return Date.from(birthLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        return birthLocalDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
     }
 }

@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-interface BatchSimulationRepository : JpaRepository<BatchSimulationEntity, UUID> {
-}
+interface BatchSimulationRepository : JpaRepository<BatchSimulationEntity, UUID>

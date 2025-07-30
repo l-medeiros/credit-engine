@@ -20,9 +20,6 @@ data class SimulationEntity(
     @Id
     val id: UUID? = UUID.randomUUID(),
 
-    @Column(name = "batch_id")
-    val batchId: UUID? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     val status: SimulationStatus = SimulationStatus.PENDING,

@@ -18,19 +18,19 @@ class SimulationService(private val feeService: FeeService) {
 
     private val logger = LoggerFactory.getLogger(SimulationService::class.java)
 
-    fun simulate(simulation: LoanApplication): LoanSimulation {
-        logger.info("Starting loan simulation for $simulation")
+    fun simulate(loanApplication: LoanApplication): LoanSimulation {
+        logger.info("Starting loan simulation for $loanApplication")
 
-        val feeRate = feeService.calculateFeeRate(simulation.birthdate)
+        val feeRate = feeService.calculateFeeRate(loanApplication.birthdate)
 
         val installmentAmount = calculateInstallmentAmount(
-            simulation.amount,
-            simulation.installments,
+            loanApplication.amount,
+            loanApplication.installments,
             BigDecimal.valueOf(feeRate)
         )
 
-        val totalAmount = installmentAmount.multiply(BigDecimal.valueOf(simulation.installments.toLong()))
-        val totalFeePaid = totalAmount.subtract(simulation.amount)
+        val totalAmount = installmentAmount.multiply(BigDecimal.valueOf(loanApplication.installments.toLong()))
+        val totalFeePaid = totalAmount.subtract(loanApplication.amount)
 
         return LoanSimulation(
             totalAmountToBePaid = totalAmount,

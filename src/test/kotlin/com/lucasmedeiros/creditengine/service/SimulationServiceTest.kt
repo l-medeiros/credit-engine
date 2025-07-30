@@ -9,8 +9,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Date
+import java.time.format.DateTimeFormatter
 
 class SimulationServiceTest {
 
@@ -78,30 +77,30 @@ class SimulationServiceTest {
 
     @Test
     fun `should call fee service with correct birthdate`() {
-        val specificDate = createDateFromAge(28)
+        val specificDateString = createDateStringFromAge(28)
         val simulation = LoanApplication(
             amount = BigDecimal("7500.00"),
-            birthdate = specificDate,
+            birthdate = specificDateString,
             installments = 20
         )
-        every { feeService.calculateFeeRate(specificDate) } returns 3.2
+        every { feeService.calculateFeeRate(specificDateString) } returns 3.2
 
         simulationService.simulate(simulation)
 
-        verify(exactly = 1) { feeService.calculateFeeRate(specificDate) }
+        verify(exactly = 1) { feeService.calculateFeeRate(specificDateString) }
     }
 
     private fun createLoanSimulation(amount: BigDecimal, age: Int, installments: Int): LoanApplication {
-        val birthDate = createDateFromAge(age)
+        val birthDateString = createDateStringFromAge(age)
         return LoanApplication(
             amount = amount,
-            birthdate = birthDate,
+            birthdate = birthDateString,
             installments = installments
         )
     }
 
-    private fun createDateFromAge(age: Int): Date {
+    private fun createDateStringFromAge(age: Int): String {
         val birthLocalDate = LocalDate.now().minusYears(age.toLong())
-        return Date.from(birthLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        return birthLocalDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
     }
 }

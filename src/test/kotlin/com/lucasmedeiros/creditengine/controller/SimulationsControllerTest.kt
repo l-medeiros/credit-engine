@@ -1,7 +1,8 @@
 package com.lucasmedeiros.creditengine.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.lucasmedeiros.creditengine.controller.request.LoanApplicationRequest
+import com.lucasmedeiros.creditengine.controller.request.BatchLoanApplicationRequest
+import com.lucasmedeiros.creditengine.domain.LoanApplication
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -28,7 +29,7 @@ class SimulationsControllerTest {
     @Test
     fun `should return 200 with simulation result when request is valid`() {
         val birthdate = LocalDate.now().minusYears(65).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        val validRequest = LoanApplicationRequest(
+        val validRequest = LoanApplication(
             amount = BigDecimal("10000.00"),
             birthdate = birthdate,
             installments = 12
@@ -47,7 +48,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when amount is negative`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal("-1000.00"),
             birthdate = "15/03/1990",
             installments = 12
@@ -65,7 +66,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when birthdate format is invalid`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal("1000.00"),
             birthdate = "15/03-1990",
             installments = 12
@@ -83,7 +84,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when installments is zero`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal("1000.00"),
             birthdate = "15/03/1990",
             installments = 0
@@ -101,7 +102,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when amount is zero`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal.ZERO,
             birthdate = "15/03/1990",
             installments = 12
@@ -119,7 +120,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when installments is negative`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal("1000.00"),
             birthdate = "15/03/1990",
             installments = -5
@@ -137,7 +138,7 @@ class SimulationsControllerTest {
 
     @Test
     fun `should return 400 when birthdate is empty`() {
-        val invalidRequest = LoanApplicationRequest(
+        val invalidRequest = LoanApplication(
             amount = BigDecimal("1000.00"),
             birthdate = "",
             installments = 12
@@ -149,6 +150,92 @@ class SimulationsControllerTest {
         }.andExpect {
             status { isBadRequest() }
             jsonPath("$.errors[0].field") { value("birthdate") }
+        }
+    }
+
+    @Test
+    fun `should return 202 when batch simulation request is valid`() {
+        val loanApplications = listOf(
+            LoanApplication(
+                amount = BigDecimal("10000.00"),
+                birthdate = "15/03/1990",
+                installments = 12
+            ),
+            LoanApplication(
+                amount = BigDecimal("5000.00"),
+                birthdate = "20/05/1985",
+                installments = 6
+            )
+        )
+        val validRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(validRequest)
+        }.andExpect {
+            status { isAccepted() }
+            jsonPath("$.batchId") { exists() }
+            jsonPath("$.status") { value("PENDING") }
+            jsonPath("$.createdAt") { exists() }
+        }
+    }
+
+    @Test
+    fun `should return 400 when batch simulation request is empty`() {
+        val invalidRequest = BatchLoanApplicationRequest(loanApplications = emptyList())
+
+        mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(invalidRequest)
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.errors[0].field") { value("loanApplications") }
+            jsonPath("$.errors[0].message") { value("Batch size must be between 1 and 10000") }
+        }
+    }
+
+    @Test
+    fun `should return 400 when batch simulation exceeds maximum size`() {
+        val birthdate = LocalDate.now().minusYears(30).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val loanApplications = (1..10001).map {
+            LoanApplication(
+                amount = BigDecimal("1000.00"),
+                birthdate = birthdate,
+                installments = 12
+            )
+        }
+        val invalidRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(invalidRequest)
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.errors[0].field") { value("loanApplications") }
+            jsonPath("$.errors[0].message") { value("Batch size must be between 1 and 10000") }
+        }
+    }
+
+    @Test
+    fun `should return 202 when batch simulation has maximum allowed size`() {
+        val birthdate = LocalDate.now().minusYears(30).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val loanApplications = (1..10000).map {
+            LoanApplication(
+                amount = BigDecimal("1000.00"),
+                birthdate = birthdate,
+                installments = 12
+            )
+        }
+        val validRequest = BatchLoanApplicationRequest(loanApplications = loanApplications)
+
+        mockMvc.post("/simulations/batch") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(validRequest)
+        }.andExpect {
+            status { isAccepted() }
+            jsonPath("$.batchId") { exists() }
+            jsonPath("$.status") { value("PENDING") }
+            jsonPath("$.createdAt") { exists() }
         }
     }
 }

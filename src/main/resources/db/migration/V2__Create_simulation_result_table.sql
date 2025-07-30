@@ -1,13 +1,7 @@
-CREATE TYPE simulation_status AS ENUM (
-    'PENDING',
-    'PROCESSING',
-    'COMPLETED'
-);
-
 CREATE TABLE simulation (
     id UUID NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
     batch_id UUID NULL,
-    status simulation_status NOT NULL DEFAULT 'PENDING',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     amount_requested DECIMAL(15,2) NOT NULL,
     birthdate DATE NOT NULL,
     installments INTEGER NOT NULL,

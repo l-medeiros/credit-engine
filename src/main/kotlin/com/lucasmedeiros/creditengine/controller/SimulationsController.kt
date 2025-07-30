@@ -1,8 +1,12 @@
 package com.lucasmedeiros.creditengine.controller
 
+import com.lucasmedeiros.creditengine.controller.request.BatchLoanApplicationRequest
 import com.lucasmedeiros.creditengine.controller.request.LoanApplicationRequest
+import com.lucasmedeiros.creditengine.controller.response.BatchSimulationResponse
 import com.lucasmedeiros.creditengine.controller.response.LoanSimulationResponse
+import com.lucasmedeiros.creditengine.service.BatchSimulationService
 import com.lucasmedeiros.creditengine.service.SimulationService
+import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -16,16 +20,18 @@ import org.springframework.web.bind.annotation.RequestBody
 @RestController
 @RequestMapping("/simulations")
 @Tag(name = "Loan Simulations", description = "Loan Simulations RESTful API")
-class SimulationsController(private val simulationService: SimulationService) {
+class SimulationsController(
+    private val simulationService: SimulationService,
+    private val batchSimulationService: BatchSimulationService
+) {
 
     private val logger = LoggerFactory.getLogger(SimulationsController::class.java)
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    fun simulate(@Valid @RequestBody loanRequest: LoanApplicationRequest): LoanSimulationResponse {
-        logger.info("Starting loan simulation for $loanRequest")
-
-        return try {
+    @Operation(summary = "Simulate a single loan application")
+    fun simulate(@Valid @RequestBody loanRequest: LoanApplicationRequest): LoanSimulationResponse =
+        try {
             val loanSimulation = loanRequest.toDomain()
             val result = simulationService.simulate(loanSimulation)
 
@@ -36,5 +42,17 @@ class SimulationsController(private val simulationService: SimulationService) {
             logger.error("Error processing loan simulation for $loanRequest error: ${exception.message}")
             throw exception
         }
-    }
+
+    @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Create a batch of loan simulations")
+    fun simulateBatch(@Valid @RequestBody batchRequest: BatchLoanApplicationRequest): BatchSimulationResponse =
+        try {
+            batchSimulationService.createBatchSimulation(batchRequest).also {
+                logger.info("Batch simulation created successfully: batchId=${it.batchId}")
+            }
+        } catch (exception: Exception) {
+            logger.error("Error creating batch simulation: ${exception.message}")
+            throw exception
+        }
 }
