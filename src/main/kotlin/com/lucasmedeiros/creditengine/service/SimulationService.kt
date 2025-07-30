@@ -59,11 +59,7 @@ class SimulationService(
         loanApplication: LoanApplication,
         result: LoanSimulation
     ): SimulationEntity {
-        val batchEntity = batchSimulationRepository.findById(batchId)
-            .orElseThrow { IllegalArgumentException("Batch not found: $batchId") }
-
         val simulationEntity = SimulationEntity(
-            batchSimulationEntity = batchEntity,
             status = SimulationStatus.COMPLETED,
             amountRequested = loanApplication.amount,
             birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),
@@ -72,7 +68,8 @@ class SimulationService(
             installmentAmount = result.monthlyInstallmentAmount,
             totalFee = result.totalFeePaid,
             processedAt = LocalDateTime.now(),
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now(),
+            batchId = batchId
         )
 
         return simulationRepository.save(simulationEntity).also {
@@ -86,11 +83,8 @@ class SimulationService(
         loanApplication: LoanApplication,
         error: Exception
     ): SimulationEntity {
-        val batchEntity = batchSimulationRepository.findById(batchId)
-            .orElseThrow { IllegalArgumentException("Batch not found: $batchId") }
-
         val simulationEntity = SimulationEntity(
-            batchSimulationEntity = batchEntity,
+            batchId = batchId,
             status = SimulationStatus.FAILED,
             amountRequested = loanApplication.amount,
             birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),

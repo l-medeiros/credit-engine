@@ -10,6 +10,8 @@ import com.lucasmedeiros.creditengine.infra.jpa.repository.BatchSimulationReposi
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -25,7 +27,14 @@ class BatchSimulationService(
     fun createBatchSimulation(request: BatchLoanApplicationRequest): BatchSimulationResponse {
         logger.info("Creating batch simulation")
         val batch = saveBatch(request)
-        publishBatchSimulationCreatedEvent(batch, request)
+
+        TransactionSynchronizationManager.registerSynchronization(
+            object : TransactionSynchronization {
+                override fun afterCommit() {
+                    publishBatchSimulationCreatedEvent(batch, request)
+                }
+            }
+        )
 
         return BatchSimulationResponse(
             batchId = batch.id!!,

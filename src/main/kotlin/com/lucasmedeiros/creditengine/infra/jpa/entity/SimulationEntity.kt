@@ -5,10 +5,7 @@ import jakarta.persistence.Table
 import jakarta.persistence.Id
 import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.FetchType
 import jakarta.persistence.Column
-import jakarta.persistence.JoinColumn
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -48,9 +45,8 @@ data class SimulationEntity(
     @Column(name = "created_at")
     val createdAt: LocalDateTime? = null,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "batch_id")
-    val batchSimulationEntity: BatchSimulationEntity? = null
+    @Column(name = "batch_id")
+    val batchId: UUID? = null
 )
 
 enum class SimulationStatus {

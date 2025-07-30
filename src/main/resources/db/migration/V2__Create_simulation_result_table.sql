@@ -11,5 +11,5 @@ CREATE TABLE simulation (
     processed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_simulation_batch FOREIGN KEY (batch_id) REFERENCES batch_simulation(id) ON DELETE CASCADE
+    FOREIGN KEY (batch_id) REFERENCES batch_simulation(id) ON DELETE CASCADE
 );

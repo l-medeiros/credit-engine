@@ -20,9 +20,9 @@ EOF
 # Generate loan applications
 for i in $(seq 1 $BATCH_SIZE); do
   if [ $i -eq $BATCH_SIZE ]; then
-    echo '    {"amount": 10000.0, "installments": 12, "birthdate": "1993-01-01"}' >> payload.json
+    echo '    {"amount": 10000.0, "installments": 12, "birthdate": "01/01/1993"}' >> payload.json
   else
-    echo '    {"amount": 10000.0, "installments": 12, "birthdate": "1993-01-01"},' >> payload.json
+    echo '    {"amount": 10000.0, "installments": 12, "birthdate": "01/01/1993"},' >> payload.json
   fi
 done
 
