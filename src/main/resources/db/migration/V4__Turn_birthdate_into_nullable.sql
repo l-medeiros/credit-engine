@@ -1,0 +1,2 @@
+
+ALTER TABLE simulation ALTER COLUMN birthdate DROP NOT NULL;

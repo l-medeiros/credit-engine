@@ -224,6 +224,33 @@ Retrieves successful simulations for a specific batch with pagination.
 - Validation tests for request/response handling
 - Pagination and batch processing tests
 
+## ⚡ Load Testing
+
+The project includes a load testing script to evaluate batch processing performance.
+
+### Prerequisites for Load Testing
+- `bash` shell
+- `curl` command
+- `bc` calculator (for time calculations)
+- Application running on `http://localhost:8080`
+
+### Running Load Tests
+
+```bash
+# Default test with 10000 applications
+./test-script/load-test.sh
+
+# Custom batch size (e.g., 1000 applications)
+./test-script/load-test.sh 1000
+```
+
+### What the Load Test Does
+
+1. **Generates payload**: Creates a JSON with the specified number of loan applications
+2. **Sends batch request**: POSTs to `/simulations/batch` endpoint
+3. **Measures performance**: Calculates total time and applications per second
+4. **Reports results**: Shows HTTP status, response time, and throughput
+
 ## 🔍 Code Quality
 
 ### Linting with Detekt

@@ -65,7 +65,7 @@ class SimulationService(
         val simulationEntity = SimulationEntity(
             status = SimulationStatus.COMPLETED,
             amountRequested = loanApplication.amount,
-            birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),
+            birthdate = safeParseBirthdate(loanApplication.birthdate),
             installments = loanApplication.installments,
             totalAmount = result.totalAmountToBePaid,
             installmentAmount = result.monthlyInstallmentAmount,
@@ -90,7 +90,7 @@ class SimulationService(
             batchId = batchId,
             status = SimulationStatus.FAILED,
             amountRequested = loanApplication.amount,
-            birthdate = LocalDate.parse(loanApplication.birthdate, DATE_FORMATTER),
+            birthdate = safeParseBirthdate(loanApplication.birthdate),
             installments = loanApplication.installments,
             processedAt = LocalDateTime.now(),
             createdAt = LocalDateTime.now()
@@ -132,4 +132,12 @@ class SimulationService(
             .findByBatchIdAndStatusOrderByProcessedAtDesc(batchId, SimulationStatus.COMPLETED, pageable)
             .map { SimulationResultResponse.fromEntity(it) }
     }
+
+    private fun safeParseBirthdate(dateString: String): LocalDate? =
+        try {
+            LocalDate.parse(dateString, DATE_FORMATTER)
+        } catch (e: Exception) {
+            logger.warn("Failed to parse birthdate: '$dateString' - ${e.message}")
+            null
+        }
 }

@@ -24,8 +24,8 @@ data class SimulationEntity(
     @Column(name = "amount_requested", nullable = false, precision = 15, scale = 2)
     val amountRequested: BigDecimal,
 
-    @Column(nullable = false)
-    val birthdate: LocalDate,
+    @Column(nullable = true)
+    val birthdate: LocalDate?,
 
     @Column(nullable = false)
     val installments: Int,

@@ -11,7 +11,7 @@ data class SimulationResultResponse(
     val batchId: UUID?,
     val status: String,
     val amountRequested: BigDecimal,
-    val birthdate: LocalDate,
+    val birthdate: LocalDate?,
     val installments: Int,
     val totalAmount: BigDecimal?,
     val installmentAmount: BigDecimal?,
